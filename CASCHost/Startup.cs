@@ -70,7 +70,7 @@ namespace CASCHost
 
             if (!Directory.Exists(Settings.GameDirectory))
             {
-                GuessGameDirectory(env);
+                Logger.LogWarning($"No GameDirectory set. Ex:'C:\\wow\\bfa'");
             }
 
             Logger.LogInformation($"Using product: {Settings.Product}");
@@ -110,30 +110,6 @@ namespace CASCHost
             Logger.LogInformation(".build.info not found in wow folder, skipping...");
         }
 
-        private static void GuessGameDirectory(IHostingEnvironment env)
-        {         
-            string wowRoot = (string)Registry.GetValue(@"HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Blizzard Entertainment\World of Warcraft\", "installPath", "");
-
-            while (Directory.Exists(wowRoot))
-            {
-                if (File.Exists(Path.Combine(wowRoot, ".product.db")))
-                {
-                    Settings.GameDirectory = wowRoot.TrimEnd('/');
-                    Settings.Save(env);
-
-                    Logger.LogInformation($"GameDirectory set to {Settings.GameDirectory}");
-
-                    return;
-                }
-                else
-                {
-                    wowRoot = Path.GetDirectoryName(wowRoot);
-                }
-            }
-
-            Logger.LogWarning($"Failed to set GameDirectory via registry.");
-        }
-
 		private void StartUpChecks(IHostingEnvironment env)
 		{
 			const string DOMAIN_REGEX = @"^(?:.*?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^\/\n]+)";
@@ -143,12 +119,52 @@ namespace CASCHost
 			Settings.HostDomain = Settings.HostDomain.TrimEnd('/');
 			Settings.Save(env);
 
-            //Game Directory check
-            if (!File.Exists(Path.Combine(Settings.GameDirectory, "World of Warcraft Launcher.exe")))
+            // Game directory check
+            string gameDirectory = Settings.GameDirectory;
+            string wowExecutable = Path.Combine(gameDirectory, "Wow.exe");
+            string dataDirectory = Path.Combine(gameDirectory, "Data");
+            string configDirectory = Path.Combine(dataDirectory, "config");
+            string dataStorageDirectory = Path.Combine(dataDirectory, "data");
+            string indicesDirectory = Path.Combine(dataDirectory, "indices");
+
+            if (!Directory.Exists(gameDirectory))
             {
-                Logger.LogCritical($"Invalid GameDirectory specified in appsettings.{Settings.Product}.json");
+                Logger.LogCritical(
+                    $"GameDirectory does not exist: {gameDirectory}");
                 DoExit();
             }
+
+            if (!File.Exists(wowExecutable))
+            {
+                Logger.LogCritical(
+                    $"Wow.exe was not found in GameDirectory: {wowExecutable}");
+                DoExit();
+            }
+
+            if (!Directory.Exists(dataDirectory))
+            {
+                Logger.LogCritical(
+                    $"Data directory was not found in GameDirectory: {dataDirectory}");
+                DoExit();
+            }
+
+            if (!Directory.Exists(configDirectory) ||
+                !Directory.Exists(dataStorageDirectory) ||
+                !Directory.Exists(indicesDirectory))
+            {
+                Logger.LogCritical(
+                    "The selected GameDirectory does not contain the expected CASC directories.");
+
+                Logger.LogCritical($"Config:  {configDirectory}");
+                Logger.LogCritical($"Data:    {dataStorageDirectory}");
+                Logger.LogCritical($"Indices: {indicesDirectory}");
+
+                DoExit();
+            }
+
+            Logger.LogInformation($"Validated game directory: {gameDirectory}");
+
+            Logger.LogInformation($"Validated game directory: {gameDirectory}");
 
             string buildInfoPath = Path.Combine(env.WebRootPath, "SystemFiles", ".build.info");
             

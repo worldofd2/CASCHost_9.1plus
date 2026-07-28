@@ -84,6 +84,9 @@ How can I see the fileDataIds that are generated?
 Isn't putting everything in the `wwwroot` folder unsecure?
 - No. There are special rooting rules that prevent access to the `Data` directory.
 
+#### More Notes: ####
+CASCHost will check for .build.info in GameDirectory and place it in "wwwroot/SystemFiles/.build.info" if available.
+
 #### Thanks: ####
 - [TOM_RUS](https://github.com/tomrus88) for his [CASCExplorer](https://github.com/WoW-Tools/CASCExplorer) implementation
 - The [WoWDev Wiki](https://wowdev.wiki/CASC) contributors
