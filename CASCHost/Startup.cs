@@ -114,10 +114,12 @@ namespace CASCHost
 		{
 			const string DOMAIN_REGEX = @"^(?:.*?:\/\/)?(?:[^@\n]+@)?(?:www\.)?([^\/\n]+)";
 
-			//Normalise values
-			Settings.PatchUrl = Settings.PatchUrl.TrimEnd('/');
-			Settings.HostDomain = Settings.HostDomain.TrimEnd('/');
-			Settings.Save(env);
+            //Normalise values
+            Settings.PatchUrl = Settings.PatchUrl?.TrimEnd('/');
+            Settings.VersionsUrl = Settings.VersionsUrl?.Trim();
+            Settings.CDNsUrl = Settings.CDNsUrl?.Trim();
+            Settings.HostDomain = Settings.HostDomain?.TrimEnd('/');
+            Settings.Save(env);
 
             // Game directory check
             string gameDirectory = Settings.GameDirectory;
@@ -164,8 +166,6 @@ namespace CASCHost
 
             Logger.LogInformation($"Validated game directory: {gameDirectory}");
 
-            Logger.LogInformation($"Validated game directory: {gameDirectory}");
-
             string buildInfoPath = Path.Combine(env.WebRootPath, "SystemFiles", ".build.info");
             
             //.build.info import
@@ -192,34 +192,75 @@ namespace CASCHost
 				Logger.LogCritical($"HostDomain invalid expected {domain.ToUpper()} got {Settings.HostDomain.ToUpper()}.");
 			}
 
-			//Validate offical patch url
-			if (!Uri.IsWellFormedUriString(Settings.PatchUrl, UriKind.Absolute))
-			{
-				Logger.LogCritical("Malformed Patch Url.");
+            // Validate patch base URL when supplied
+            if (!string.IsNullOrWhiteSpace(Settings.PatchUrl) &&
+                !Uri.IsWellFormedUriString(Settings.PatchUrl, UriKind.Absolute))
+            {
+                Logger.LogCritical($"Malformed PatchUrl: {Settings.PatchUrl}");
                 DoExit();
             }
-			else if (!PingPatchUrl())
-			{
-				Logger.LogCritical("Unreachable Patch Url.");
-                DoExit();
-            }
-		}
 
-		private bool PingPatchUrl()
-		{
-			try
-			{
-				using (var clientHandler = new HttpClientHandler() { AllowAutoRedirect = false })
-				using (var webRequest = new HttpClient(clientHandler) { Timeout = TimeSpan.FromSeconds(10) })
-				using (var request = new HttpRequestMessage(HttpMethod.Head, Settings.PatchUrl + "/versions"))
-				using (var response = webRequest.SendAsync(request).Result)
-					return response.StatusCode == HttpStatusCode.OK;
-			}
-			catch
-			{
-				return false;
-			}
-		}
+            // Validate explicit metadata URLs
+            if (!Uri.IsWellFormedUriString(Settings.VersionsUrl, UriKind.Absolute))
+            {
+                Logger.LogCritical($"Malformed VersionsUrl: {Settings.VersionsUrl}");
+                DoExit();
+            }
+
+            if (!Uri.IsWellFormedUriString(Settings.CDNsUrl, UriKind.Absolute))
+            {
+                Logger.LogCritical($"Malformed CDNsUrl: {Settings.CDNsUrl}");
+                DoExit();
+            }
+
+            if (!PingUrl(Settings.VersionsUrl))
+            {
+                Logger.LogCritical($"Unreachable VersionsUrl: {Settings.VersionsUrl}");
+                DoExit();
+            }
+
+            if (!PingUrl(Settings.CDNsUrl))
+            {
+                Logger.LogCritical($"Unreachable CDNsUrl: {Settings.CDNsUrl}");
+                DoExit();
+            }
+        }
+
+        private bool PingUrl(string url)
+        {
+            try
+            {
+                using (var clientHandler = new HttpClientHandler()
+                {
+                    AllowAutoRedirect = true
+                })
+                using (var webRequest = new HttpClient(clientHandler)
+                {
+                    Timeout = TimeSpan.FromSeconds(10)
+                })
+                using (var request = new HttpRequestMessage(HttpMethod.Get, url))
+                using (var response = webRequest.SendAsync(
+                    request,
+                    HttpCompletionOption.ResponseHeadersRead).Result)
+                {
+                    if (!response.IsSuccessStatusCode)
+                    {
+                        Logger.LogError(
+                            $"Metadata URL returned HTTP {(int)response.StatusCode}: {url}");
+
+                        return false;
+                    }
+
+                    return true;
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError($"Unable to reach metadata URL: {url}");
+                Logger.LogError(ex.Message);
+                return false;
+            }
+        }
 
         private void DoExit()
         {

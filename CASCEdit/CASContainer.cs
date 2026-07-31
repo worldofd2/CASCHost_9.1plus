@@ -72,11 +72,28 @@ namespace CASCEdit
             // load hosted configs if not basic
             if (!Settings.Basic)
             {
-                Versions = new SingleConfig(Settings.PatchUrl + "/versions", "Region", BuildInfo["Branch"]);
-                CDNs = new SingleConfig(Settings.PatchUrl + "/cdns", "Name", BuildInfo["Branch"]);
+                string versionsUrl = !string.IsNullOrWhiteSpace(Settings.VersionsUrl)
+                    ? Settings.VersionsUrl
+                    : Settings.PatchUrl + "/versions";
 
-				// download urls
-				var cdns = CDNs["Hosts"].Split(' ').Select(x => $"http://{x}/{CDNs["Path"]}").ToList();				
+                string cdnsUrl = !string.IsNullOrWhiteSpace(Settings.CDNsUrl)
+                    ? Settings.CDNsUrl
+                    : Settings.PatchUrl + "/cdns";
+
+                Logger.LogInformation($"Loading versions metadata from: {versionsUrl}");
+                Versions = new SingleConfig(
+                    versionsUrl,
+                    "Region",
+                    BuildInfo["Branch"]);
+
+                Logger.LogInformation($"Loading CDNs metadata from: {cdnsUrl}");
+                CDNs = new SingleConfig(
+                    cdnsUrl,
+                    "Name",
+                    BuildInfo["Branch"]);
+
+                // download urls
+                var cdns = CDNs["Hosts"].Split(' ').Select(x => $"http://{x}/{CDNs["Path"]}").ToList();				
 				Settings.DownloadLocations = new HashSet<string>(cdns);
 
 				// cdns urls

@@ -25,8 +25,10 @@ namespace CASCHost
 
         public string HostDomain { get; set; } // accessible address of this server
 		public string[] CDNs { get; set; } // custom CDNs i.e. local client CASC archive clone
-		public string PatchUrl { get; set; } // offical blizzard patch url i.e. http://us.patch.battle.net:1119
-		public string Locale { get; set; } // preferred locale for content
+        public string PatchUrl { get; set; } // Base patch URL used for patch/install assets
+        public string VersionsUrl { get; set; } // Explicit versions metadata URL
+        public string CDNsUrl { get; set; } // Explicit CDNs metadata URL
+        public string Locale { get; set; } // preferred locale for content
 
 		public string[] DirectoryHash { get; set; } // hashes of directories for offline change detection
 

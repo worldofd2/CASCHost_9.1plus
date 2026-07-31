@@ -17,7 +17,9 @@ namespace CASCEdit
         public string SystemFilesPath { get; set; }
         public string BuildInfoPath { get; set; }
         public string OutputPath { get; set; }
-        public string PatchUrl { get; set; }        
+        public string PatchUrl { get; set; }
+        public string VersionsUrl { get; set; }
+        public string CDNsUrl { get; set; }
         public string Host { get; set; }
         public ICASCLog Logger { get; set; } = new ConsoleLogger();
         public ICache Cache { get; set; }
