@@ -194,9 +194,16 @@ namespace CASCHost
 
 			//Open the CASC Container
 			CASContainer.Open(settings);
-			CASContainer.OpenCdnIndices(false);
+
+            // Open the existing client's local CASC indices first.
+            CASContainer.OpenLocalIndices();
+
+            CASContainer.OpenCdnIndices(false);
 			CASContainer.OpenEncoding();
-			CASContainer.OpenRoot(settings.Locale, Startup.Settings.MinimumFileDataId, Startup.Settings.OnlineListFile);
+			CASContainer.OpenRoot(
+				settings.Locale, 
+				Startup.Settings.MinimumFileDataId, 
+				Startup.Settings.OnlineListFile);
 
 			if(Startup.Settings.BNetAppSupport) // these are only needed by the bnet app launcher
 			{
@@ -331,29 +338,39 @@ namespace CASCHost
 
 			Startup.Logger.LogConsole($"Default Locale set to {locale}.");
 
-			settings = new CASSettings()
-			{
-				Host = Startup.Settings.HostDomain,
-				BasePath = _env.WebRootPath,
+            settings = new CASSettings()
+            {
+                Host = Startup.Settings.HostDomain,
+
+                // Source WoW installation
+                BasePath = Startup.Settings.GameDirectory,
                 GameDirectory = Startup.Settings.GameDirectory,
 
-                OutputPath = Path.Combine("Output", Startup.Settings.Product),
-				SystemFilesPath = Path.Combine("SystemFiles", Startup.Settings.Product),
-				BuildInfoPath = this.buildInfoPath,
+                // CASCHost-generated output
+                OutputPath = Path.Combine(
+					_env.WebRootPath,
+					"Output",
+					Startup.Settings.Product),
 
-				PatchUrl = Startup.Settings.PatchUrl,
+                SystemFilesPath = Path.Combine(
+					_env.WebRootPath,
+					"SystemFiles",
+					Startup.Settings.Product),
+
+                BuildInfoPath = buildInfoPath,
+
+                PatchUrl = Startup.Settings.PatchUrl,
                 VersionsUrl = Startup.Settings.VersionsUrl,
                 CDNsUrl = Startup.Settings.CDNsUrl,
                 Region = Startup.Settings.Region,
 
                 Logger = Startup.Logger,
-				Cache = Startup.Cache,
-				Locale = locale,
-				CDNs = new HashSet<string>(),
+                Cache = Startup.Cache,
+                Locale = locale,
+                CDNs = new HashSet<string>(),
                 StaticMode = Startup.Settings.StaticMode,
                 Product = Startup.Settings.Product
             };
-
 
             if (!settings.StaticMode)
             {
