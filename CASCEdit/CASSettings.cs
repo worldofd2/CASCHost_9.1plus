@@ -21,6 +21,10 @@ namespace CASCEdit
         public string VersionsUrl { get; set; }
         public string CDNsUrl { get; set; }
         public string Host { get; set; }
+
+        public string GameDirectory { get; set; }
+        public string Region { get; set; } = "us";
+
         public ICASCLog Logger { get; set; } = new ConsoleLogger();
         public ICache Cache { get; set; }
 		public LocaleFlags Locale { get; set; } = LocaleFlags.enUS;

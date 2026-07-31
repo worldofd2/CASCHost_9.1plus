@@ -30,7 +30,9 @@ namespace CASCHost
         public string CDNsUrl { get; set; } // Explicit CDNs metadata URL
         public string Locale { get; set; } // preferred locale for content
 
-		public string[] DirectoryHash { get; set; } // hashes of directories for offline change detection
+        public string Region { get; set; } = "us";
+
+        public string[] DirectoryHash { get; set; } // hashes of directories for offline change detection
 
         public string GameVersion { get; set; } = ""; // Game version the cdn was built for
 

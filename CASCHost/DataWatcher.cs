@@ -335,12 +335,17 @@ namespace CASCHost
 			{
 				Host = Startup.Settings.HostDomain,
 				BasePath = _env.WebRootPath,
-				OutputPath = Path.Combine("Output", Startup.Settings.Product),
+                GameDirectory = Startup.Settings.GameDirectory,
+
+                OutputPath = Path.Combine("Output", Startup.Settings.Product),
 				SystemFilesPath = Path.Combine("SystemFiles", Startup.Settings.Product),
 				BuildInfoPath = this.buildInfoPath,
+
 				PatchUrl = Startup.Settings.PatchUrl,
                 VersionsUrl = Startup.Settings.VersionsUrl,
                 CDNsUrl = Startup.Settings.CDNsUrl,
+                Region = Startup.Settings.Region,
+
                 Logger = Startup.Logger,
 				Cache = Startup.Cache,
 				Locale = locale,

@@ -80,6 +80,18 @@ namespace CASCEdit
                     ? Settings.CDNsUrl
                     : Settings.PatchUrl + "/cdns";
 
+                Logger.LogInformation($"Selecting metadata region: {Settings.Region}");
+
+                Versions = new SingleConfig(
+                    versionsUrl,
+                    "Region",
+                    Settings.Region);
+
+                CDNs = new SingleConfig(
+                    cdnsUrl,
+                    "Name",
+                    Settings.Region);
+
                 Logger.LogInformation($"Loading versions metadata from: {versionsUrl}");
                 Versions = new SingleConfig(
                     versionsUrl,
@@ -124,7 +136,8 @@ namespace CASCEdit
         {
             string buildKey = BuildInfo["Build Key"];
             string buildCfgPath = Path.Combine(Settings.SystemFilesPath, buildKey);
-            string buildCfgLocalPath = Path.Combine(BasePath, "Data", "config", buildKey.Substring(0, 2), buildKey.Substring(2, 2), buildKey);
+            string buildCfgLocalPath = Path.Combine(Settings.GameDirectory, "Data", "config", buildKey.Substring(0, 2), buildKey.Substring(2, 2), buildKey);
+            Logger.LogInformation($"Looking for local BuildConfig: {buildCfgLocalPath}");
 
             if (File.Exists(buildCfgLocalPath))
             {
@@ -149,7 +162,8 @@ namespace CASCEdit
         {
             string cdnKey = BuildInfo["CDN Key"];
             string cdnCfgPath = Path.Combine(Settings.SystemFilesPath, cdnKey);
-            string cdnCfgLocalPath = Path.Combine(BasePath, "Data", "config", cdnKey.Substring(0, 2), cdnKey.Substring(2, 2), cdnKey);
+            string cdnCfgLocalPath = Path.Combine(Settings.GameDirectory, "Data", "config", cdnKey.Substring(0, 2), cdnKey.Substring(2, 2), cdnKey);
+            Logger.LogInformation($"Looking for local CDNConfig: {cdnCfgLocalPath}");
 
             if (File.Exists(cdnCfgLocalPath))
             {
