@@ -47,10 +47,14 @@ namespace CASCEdit.Handlers
 			this.locale = locale;
             string cdnPath = Helper.GetCDNPath("listfile.csv");
 
+            encodingMap =
+				(data as BLTEStream)?.EncodingMap.FirstOrDefault()
+				?? new EncodingMap(EncodingType.ZLib, 9);
+
             if (!(File.Exists(cdnPath)) && onlineListfile)
             {
-                CASContainer.Logger.LogInformation("Downloading listfile from WoW.Tools");
-                ListFileClient.DownloadFile("https://wow.tools/casc/listfile/download/csv/unverified", cdnPath);
+                CASContainer.Logger.LogInformation("Downloading listfile from https://github.com/wowdev/wow-listfile");
+                ListFileClient.DownloadFile("https://github.com/wowdev/wow-listfile/releases/latest/download/community-listfile.csv", cdnPath);
             }
 
             BinaryReader stream = new BinaryReader(data);
@@ -78,25 +82,35 @@ namespace CASCEdit.Handlers
 					LocaleFlags = (LocaleFlags)stream.ReadUInt32(),
 				};
 
+                CASContainer.Logger.LogInformation(
+					$"Root chunk: " +
+					$"Count={chunk.Count}, " +
+					$"ContentFlags=0x{(uint)chunk.ContentFlags:X8}, " +
+					$"LocaleFlags=0x{(uint)chunk.LocaleFlags:X8}");
+
                 parsedFiles += (int)chunk.Count;
 
+                //Console.WriteLine("Chunk: {0} {1} (size {2})", chunk.ContentFlags, chunk.LocaleFlags, chunk.Count);
 
-					//Console.WriteLine("Chunk: {0} {1} (size {2})", chunk.ContentFlags, chunk.LocaleFlags, chunk.Count);
+                bool isGlobalLocale =
+					chunk.LocaleFlags == LocaleFlags.All_WoW;
 
-				if (chunk.LocaleFlags == LocaleFlags.All_WoW && chunk.ContentFlags == ContentFlags.F00080000)
-					GlobalRoot = chunk;
+                bool hasGlobalContentFlags =
+                    (chunk.ContentFlags & ContentFlags.F00080000) ==
+                    ContentFlags.F00080000;
 
-				// set the global root if not already set
-				if (GlobalRoot == null)
+                if (isGlobalLocale && hasGlobalContentFlags)
                 {
+                    GlobalRoot = chunk;
 
-                    if (GlobalRoot != null)
-                    {
-                        CASContainer.Logger.LogInformation($"Global root found. Flags: {chunk.ContentFlags}, {chunk.LocaleFlags}. Count: {chunk.Count}");
-                    }
+                    CASContainer.Logger.LogInformation(
+                        $"Global root found. " +
+                        $"ContentFlags=0x{(uint)chunk.ContentFlags:X8}, " +
+                        $"LocaleFlags=0x{(uint)chunk.LocaleFlags:X8}, " +
+                        $"Count={chunk.Count}");
                 }
 
-				uint fileDataIndex = 0;
+                uint fileDataIndex = 0;
 				for (int i = 0; i < chunk.Count; i++)
 				{
 					uint offset = stream.ReadUInt32();
@@ -140,11 +154,20 @@ namespace CASCEdit.Handlers
                 Chunks.Add(chunk);
 			}
 
-			if (GlobalRoot == null)
-			{
-				CASContainer.Logger.LogCritical($"No Global root found. Root file is corrupt.");
-				return;
-			}
+            if (GlobalRoot == null)
+            {
+                string chunks = string.Join(
+                    Environment.NewLine,
+                    Chunks.Select(chunk =>
+                        $"Count={chunk.Count}, " +
+                        $"ContentFlags=0x{(uint)chunk.ContentFlags:X8}, " +
+                        $"LocaleFlags=0x{(uint)chunk.LocaleFlags:X8}"));
+
+                throw new InvalidDataException(
+                    "No compatible global root chunk was found." +
+                    Environment.NewLine +
+                    chunks);
+            }
 
             // use listfile to assign names
             var listFileLines = File.ReadAllLines(cdnPath);
@@ -175,9 +198,6 @@ namespace CASCEdit.Handlers
 
             // set maxid from cache
             maxId = Math.Max(Math.Max(maxId, minimumid), CASContainer.Settings.Cache?.MaxId ?? 0);
-
-			// store encoding map
-			encodingMap = (data as BLTEStream)?.EncodingMap.FirstOrDefault() ?? new EncodingMap(EncodingType.ZLib, 9);
 
 			stream?.Dispose();
 			data?.Dispose();

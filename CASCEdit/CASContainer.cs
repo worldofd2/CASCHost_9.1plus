@@ -92,18 +92,6 @@ namespace CASCEdit
                     "Name",
                     Settings.Region);
 
-                Logger.LogInformation($"Loading versions metadata from: {versionsUrl}");
-                Versions = new SingleConfig(
-                    versionsUrl,
-                    "Region",
-                    BuildInfo["Branch"]);
-
-                Logger.LogInformation($"Loading CDNs metadata from: {cdnsUrl}");
-                CDNs = new SingleConfig(
-                    cdnsUrl,
-                    "Name",
-                    BuildInfo["Branch"]);
-
                 // download urls
                 var cdns = CDNs["Hosts"].Split(' ').Select(x => $"http://{x}/{CDNs["Path"]}").ToList();				
 				Settings.DownloadLocations = new HashSet<string>(cdns);
