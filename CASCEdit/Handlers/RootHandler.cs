@@ -90,27 +90,9 @@ namespace CASCEdit.Handlers
 
                 parsedFiles += (int)chunk.Count;
 
-                //Console.WriteLine("Chunk: {0} {1} (size {2})", chunk.ContentFlags, chunk.LocaleFlags, chunk.Count);
+				//Console.WriteLine("Chunk: {0} {1} (size {2})", chunk.ContentFlags, chunk.LocaleFlags, chunk.Count);
 
-                bool isGlobalLocale =
-					chunk.LocaleFlags == LocaleFlags.All_WoW;
-
-                bool hasGlobalContentFlags =
-                    (chunk.ContentFlags & ContentFlags.F00080000) ==
-                    ContentFlags.F00080000;
-
-                if (isGlobalLocale && hasGlobalContentFlags)
-                {
-                    GlobalRoot = chunk;
-
-                    CASContainer.Logger.LogInformation(
-                        $"Global root found. " +
-                        $"ContentFlags=0x{(uint)chunk.ContentFlags:X8}, " +
-                        $"LocaleFlags=0x{(uint)chunk.LocaleFlags:X8}, " +
-                        $"Count={chunk.Count}");
-                }
-
-                uint fileDataIndex = 0;
+				uint fileDataIndex = 0;
 				for (int i = 0; i < chunk.Count; i++)
 				{
 					uint offset = stream.ReadUInt32();
@@ -153,6 +135,42 @@ namespace CASCEdit.Handlers
 
                 Chunks.Add(chunk);
 			}
+
+            // BFA 8.3.7 uses multiple all-locale root chunks.
+            // Select the largest general all-locale chunk as the global root.
+            List<RootChunk> globalCandidates = Chunks
+                .Where(chunk => chunk.LocaleFlags == LocaleFlags.All_WoW)
+                .ToList();
+
+            GlobalRoot = globalCandidates
+                .Where(chunk =>
+                {
+                    uint flags = (uint)chunk.ContentFlags;
+
+                    // BFA general root flags observed as 0x10000080.
+                    return (flags & 0x10000080u) == 0x10000080u;
+                })
+                .OrderByDescending(chunk => chunk.Count)
+                .FirstOrDefault();
+
+            // Fallback for other compatible BFA-era roots.
+            if (GlobalRoot == null)
+            {
+                GlobalRoot = globalCandidates
+                    .Where(chunk =>
+                        (((uint)chunk.ContentFlags & 0x10000000u) != 0))
+                    .OrderByDescending(chunk => chunk.Count)
+                    .FirstOrDefault();
+            }
+
+            if (GlobalRoot != null)
+            {
+                CASContainer.Logger.LogInformation(
+                    $"Selected global root. " +
+                    $"Count={GlobalRoot.Count}, " +
+                    $"ContentFlags=0x{(uint)GlobalRoot.ContentFlags:X8}, " +
+                    $"LocaleFlags=0x{(uint)GlobalRoot.LocaleFlags:X8}");
+            }
 
             if (GlobalRoot == null)
             {
